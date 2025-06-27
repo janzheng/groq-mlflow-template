@@ -1,0 +1,11 @@
+[project]
+name = "groq-mlflow"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.10.16"
+dependencies = [
+    "dotenv>=0.9.9",
+    "groq>=0.29.0",
+    "mlflow>=3.1.1",
+]
