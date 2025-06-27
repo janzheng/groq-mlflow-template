@@ -38,42 +38,194 @@ This application demonstrates how to integrate Groq API calls with MLflow for co
 - **Backend:** Python with automatic instrumentation
 - **Storage:** Local file system (with optional remote tracking server)
 
-## Quick Start
+# Quick‑Start: Groq ✕ MLflow with uv & pyenv (macOS)
 
-### Prerequisites
-- Python 3.10.16 or higher
-- Groq API key ([Create a free GroqCloud account and generate an API key here](https://console.groq.com/keys))
-- Optional: MLflow tracking server for remote logging
+---
 
-### Setup
+## 0 · Get the code
+First, clone this repository and navigate to the project directory:
 
-1. **Clone the repository**
-   ```bash
-   git clone <repository-url>
-   cd groq-mlflow
-   ```
+```bash
+git clone https://github.com/janzheng/groq-mlflow-template
+cd groq-mlflow-template/groq-mlflow
+```
 
-2. **Install dependencies**
-   ```bash
-   # Using uv (recommended)
-   uv sync
-   
-   # Or using pip
-   pip install -r requirements.txt
-   ```
+---
 
-3. **Set up environment variables**
-   ```bash
-   # Create a .env file in the project root
-   echo "GROQ_API_KEY=your_groq_api_key_here" > .env
-   ```
+## 1 · Install development tools
+Install the essential tools for Python version management and fast package installation:
 
-4. **Run the example**
-   ```bash
-   uv run python main.py
-   # Or with python directly
-   python main.py
-   ```
+```bash
+brew install pyenv curl uv          # Python manager + fast env / pip tool
+echo 'export UV_NO_BUILD=1' >> ~/.zshrc
+```
+
+The `UV_NO_BUILD=1` flag prevents uv from building packages from source, which speeds up installation and avoids common compilation issues.
+
+---
+
+## 2 · Set up Python version
+
+Install and pin Python 3.12.5 for this project to ensure compatibility:
+
+```bash
+pyenv install 3.12.5    # Install Python 3.12.5 (one-time setup)
+pyenv local 3.12.5      # Pin this version for the project
+```
+
+This creates a `.python-version` file that ensures everyone uses the same Python version.
+
+---
+
+## 3 · Create isolated environment
+
+Set up a virtual environment managed by uv for clean dependency isolation:
+
+```bash
+uv venv --python "$(pyenv which python)"   # Creates .venv directory
+```
+
+With uv, you don't need to manually activate the environment - `uv run` handles this automatically. However, you can still activate it manually if needed:
+
+```bash
+# Optional: activate manually for direct python/pip usage
+source .venv/bin/activate
+```
+
+---
+
+## 4 · Install dependencies
+
+Install the required packages with pinned versions to avoid dependency conflicts:
+
+```bash
+uv pip install \
+  mlflow \
+  'groq==0.26.*' \
+  python-dotenv \
+  setuptools --upgrade
+```
+
+The `groq==0.26.*` version is specifically chosen for MLflow compatibility. The `setuptools` upgrade restores the `distutils` module needed by some packages on Python 3.12+.
+
+Create a `requirements.txt` file to track these dependencies:
+
+```
+mlflow
+groq==0.26.*
+python-dotenv
+setuptools>=70
+```
+
+---
+
+## 5 · Configure your API key
+
+Create a `.env` file with your Groq API key ([get one free here](https://console.groq.com/keys)):
+
+```bash
+# .env file (never commit this to git)
+GROQ_API_KEY=gsk_your_actual_api_key_here
+```
+
+Make sure to add `.env` to your `.gitignore` to prevent accidentally committing your API key.
+
+---
+
+## 6 · Understanding the code
+
+The `main.py` file demonstrates MLflow integration with automatic tracing:
+
+```python
+import pathlib
+import mlflow
+import groq
+from dotenv import load_dotenv
+
+load_dotenv()                                 # Load GROQ_API_KEY from .env
+mlflow.set_tracking_uri(
+  f"file://{pathlib.Path.cwd() / 'mlruns'}")  # Store traces locally
+mlflow.set_experiment("Groq")                 # Organize runs by experiment
+mlflow.groq.autolog()                         # Enable automatic tracing
+
+client = groq.Groq()                          # API key loaded from environment
+msg = client.chat.completions.create(
+  model="llama-3.1-8b-instant",
+  messages=[{
+    "role": "user",
+    "content": "Explain the importance of low latency LLMs."
+  }]
+)
+print(msg.choices[0].message.content)
+```
+
+The `mlflow.groq.autolog()` call automatically captures all API interactions, including timing, token usage, and model parameters.
+
+---
+
+## 7 · Run your first experiment
+
+Execute the script to make your first tracked API call:
+
+```bash
+uv run main.py        # Runs the script and logs everything to ./mlruns
+```
+
+**What happens behind the scenes:**
+When you run `main.py`, MLflow automatically creates a local file-based tracking store in the `./mlruns` directory. Each time you make a Groq API call, MLflow captures and saves:
+
+- **Request data**: Your prompt, model parameters, timestamps
+- **Response data**: The AI's response, token counts, latency metrics  
+- **Trace artifacts**: Detailed execution logs as JSON files
+- **Metadata**: Run IDs, experiment organization, tags
+
+You'll see a folder structure like:
+```
+mlruns/
+├── 0/                          # Default experiment
+├── [experiment-id]/            # Your "Groq" experiment  
+│   └── traces/
+│       └── [trace-id]/         # Individual API call traces
+│           ├── artifacts/      # Response data, JSON logs
+│           ├── request_metadata/ # Input parameters, timestamps
+│           └── trace_info.yaml # Run summary
+```
+
+---
+
+## 8 · View your results
+
+Launch the MLflow UI to explore your experiment data:
+
+```bash
+uv run -- mlflow ui \
+  --backend-store-uri "$(pwd)/mlruns" \
+  --host 0.0.0.0 --port 5001
+```
+
+**How the UI works:**
+The MLflow UI is a web server that reads directly from your local `mlruns` folder. The `--backend-store-uri` flag tells it exactly where to find your tracking data. When you open [http://localhost:5001](http://localhost:5001), you'll see:
+
+- **Experiments** tab: Overview of all your runs organized by experiment name
+- **Traces** tab: Detailed call-by-call analysis with timing and token metrics
+- **Live updates**: As you run more experiments, the UI automatically reflects new data
+
+The UI essentially provides a visual interface to browse the same files that `main.py` created in your `mlruns` directory.
+
+> **Note:** We use port 5001 because macOS AirPlay Receiver occupies the default port 5000.
+
+---
+
+## 9 · Ongoing development
+
+For daily usage, simply run experiments and monitor results:
+
+```bash
+uv run main.py   # Each run creates new tracking data
+# MLflow UI updates automatically at http://localhost:5001
+```
+
+Modify the model, prompts, or parameters in `main.py` and each run will be tracked separately for easy comparison.
 
 ## Features
 
