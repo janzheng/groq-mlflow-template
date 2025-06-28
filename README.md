@@ -181,7 +181,7 @@ First, clone this repository and navigate to the project directory:
 
 ```bash
 git clone https://github.com/janzheng/groq-mlflow-template
-cd groq-mlflow-template/groq-mlflow
+cd groq-mlflow-template/groq-mlflow-template
 ```
 
 ### 2. Install development tools
