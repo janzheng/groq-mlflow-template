@@ -184,69 +184,34 @@ git clone https://github.com/janzheng/groq-mlflow-template
 cd groq-mlflow-template/groq-mlflow-template
 ```
 
-### 2. Install development tools
+### 2. Install uv
 
-While not required, these tools are used for Python version management and package installation, and will make your life much easier down the line:
+Install the fast Python package manager:
 
 ```bash
-brew install pyenv curl uv                  # Python manager + fast env / pip tool
-# echo 'export UV_NO_BUILD=1' >> ~/.zshrc   # Prevents UV from rebuilding packages
+brew install uv                  # Fast Python package manager
+# echo 'export UV_NO_BUILD=1' >> ~/.zshrc   # Optional: prevents UV from rebuilding packages
 ```
 
 The `UV_NO_BUILD=1` flag prevents uv from building packages from source, which speeds up installation and avoids common compilation issues. Sometimes you may run into dependency problems with MLFlow where it's unable to rebuild certain packages, and adding this line might help.
 
+### 3. Install dependencies
 
-### 3. Set up Python version
-
-Install and pin Python 3.12.5 for this project to ensure compatibility. Using `pyenv` ensures you can easily switch between python versions:
+Install the required packages (this will automatically create a virtual environment):
 
 ```bash
-pyenv install 3.12.5    # Install Python 3.12.5 (one-time setup)
-pyenv local 3.12.5      # Pin this version for the project
+uv sync  # Creates .venv and installs from pyproject.toml
 ```
 
-This creates a `.python-version` file that ensures everyone uses the same Python version.
-
-
-### 4. Create isolated environment
-
-Set up a virtual environment managed by uv for clean dependency isolation. This isolates your installed dependencies to just this project:
+Or install manually if you don't have a pyproject.toml:
 
 ```bash
-uv venv --python "$(pyenv which python)"   # Creates .venv directory
-```
-
-With uv, you don't need to manually activate the environment - `uv run` handles this automatically. However, you can still activate it manually if needed:
-
-```bash
-# Optional: activate manually for direct python/pip usage
-source .venv/bin/activate
-```
-
-### 5. Install dependencies
-
-Install the required packages with pinned versions to avoid dependency conflicts:
-
-```bash
-uv pip install \
-  mlflow \
-  'groq==0.26.*' \
-  python-dotenv \
-  setuptools --upgrade
+uv add mlflow 'groq==0.26.*' python-dotenv setuptools
 ```
 
 The `groq==0.26.*` version is specifically chosen for MLflow compatibility. The `setuptools` upgrade restores the `distutils` module needed by some packages on Python 3.12+.
 
-Create a `requirements.txt` file to track these dependencies:
-
-```
-mlflow
-groq==0.26.*
-python-dotenv
-setuptools>=70
-```
-
-### 6. Configure your API key
+### 4. Configure your API key
 
 Create a `.env` file with your Groq API key ([get one free here](https://console.groq.com)):
 
@@ -258,7 +223,7 @@ GROQ_API_KEY=gsk_your_actual_api_key_here
 Make sure to add `.env` to your `.gitignore` to prevent accidentally committing your API key.
 
 
-### 7. Understanding the code
+### 5. Understanding the code
 
 The `main.py` file demonstrates MLflow integration with automatic tracing:
 
@@ -288,7 +253,7 @@ print(msg.choices[0].message.content)
 The `mlflow.groq.autolog()` call automatically captures all API interactions, including timing, token usage, and model parameters. In this example, we store the traces to a local folder, which we can then load into MLFlow. With MLFlow you can also run a standalone server, or connect to Databricks. Refer to [the documentation here](https://mlflow.org/docs/latest/genai/).
 
 
-### 8. Run your first experiment
+### 6. Run your first experiment
 
 Execute the script to make your first tracked API call:
 
@@ -317,7 +282,7 @@ mlruns/
 ```
 
 
-### 9. View your results
+### 7. View your results
 
 Launch the MLflow UI to explore your experiment data:
 
@@ -339,7 +304,7 @@ The UI essentially provides a visual interface to browse the same files that `ma
 > **Note:** We use port 5001 because macOS AirPlay Receiver occupies the default port 5000.
 
 
-### 10. Ongoing development
+### 8. Ongoing development
 
 For daily usage, simply run experiments and monitor results:
 
